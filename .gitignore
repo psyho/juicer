@@ -4,3 +4,5 @@ test/bin
 coverage
 pkg
 .idea
+.bundle
+.rvmrc

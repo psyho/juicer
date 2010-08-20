@@ -1,0 +1,11 @@
+source "http://rubygems.org"
+
+gem "bundler", "~> 0.9.26"
+gem "shoulda"
+gem "mocha"
+gem "redgreen"
+gem "nokogiri"
+gem "zip"
+gem "cmdparse"
+gem "turn"
+gem "fakefs"
