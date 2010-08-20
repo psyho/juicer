@@ -3,3 +3,4 @@ test/data
 test/bin
 coverage
 pkg
+.idea
