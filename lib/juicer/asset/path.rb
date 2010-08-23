@@ -244,16 +244,12 @@ module Juicer
       def path_with_cache_buster(path, options = {})
         return path if !options.key?(:cache_buster) && options[:cache_buster_type].nil?
 
-        buster_path = nil
         type = options[:cache_buster_type] || :soft
 
-        if options.key?(:cache_buster)
-          # Pass :cache_buster even if it's nil
-          buster_path = Juicer::CacheBuster.send(type, filename, options[:cache_buster])
-        else
-          # If :cache_buster wasn't specified, rely on default value
-          buster_path = Juicer::CacheBuster.send(type, filename)
-        end
+        buster_options = {:revision_type => options[:cache_buster_format]}
+        buster_options[:parameter] = options[:cache_buster] if options.key?(:cache_buster)
+
+        buster_path = Juicer::CacheBuster.send(type, filename, buster_options)
 
         path.sub(File.basename(path), File.basename(buster_path))
       end
