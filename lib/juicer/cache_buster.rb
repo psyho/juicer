@@ -78,23 +78,34 @@ module Juicer
     # See <tt>#hard</tt> and <tt>#soft</tt> for explanation of the parameter
     # argument.
     #
-    def self.path(file, type = :soft, parameter = DEFAULT_PARAMETER)
+    def self.path(file, opts = {})
       return file if file =~ /data:.*;base64/
+
+      type = opts[:type]
       type = [:soft, :hard, :rails].include?(type) ? type : :soft
+
+      parameter = opts.key?(:parameter) ? opts[:parameter] : DEFAULT_PARAMETER
       parameter = nil if type == :rails
+
       file = self.clean(file, parameter)
       filename = file.split("?").first
+
+      revision_type = opts[:revision_type]
+      revision_type = :mtime if type == :rails
+      revision_type = [:git, :mtime].include?(revision_type) ? revision_type : :mtime
+
       raise ArgumentError.new("#{file} could not be found") unless File.exists?(filename)
-      mtime = File.mtime(filename).to_i
+
+      revision = Revision.send(revision_type, filename)
 
       if type == :soft
         parameter = "#{parameter}=".sub(/^=$/, '')
-        return "#{file}#{file.index('?') ? '&' : '?'}#{parameter}#{mtime}"
+        return "#{file}#{file.index('?') ? '&' : '?'}#{parameter}#{revision}"
       elsif type == :rails
-        return "#{file}#{file.index('?') ? '' : "?#{mtime}"}"
+        return "#{file}#{file.index('?') ? '' : "?#{revision}"}"
       end
 
-      file.sub(/(\.[^\.]+$)/, "-#{parameter}#{mtime}" + '\1')
+      file.sub(/(\.[^\.]+$)/, "-#{parameter}#{revision}" + '\1')
     end
 
     #
@@ -104,8 +115,8 @@ module Juicer
     # <tt>images/logo-cb1234567890.png</tt> which is the case for the default
     # parameter name "cb" (as in *c*ache *b*uster).
     #
-    def self.hard(file, parameter = DEFAULT_PARAMETER)
-      self.path(file, :hard, parameter)
+    def self.hard(file, opts = {})
+      self.path(file, opts.merge(:type => :hard))
     end
 
     #
@@ -115,8 +126,8 @@ module Juicer
     # <tt>images/logo.png?cb=1234567890</tt> which is the case for the default
     # parameter name "cb" (as in *c*ache *b*uster).
     #
-    def self.soft(file, parameter = DEFAULT_PARAMETER)
-      self.path(file, :soft, parameter)
+    def self.soft(file, opts = {})
+      self.path(file, opts.merge(:type => :soft))
     end
 
     #
@@ -124,8 +135,8 @@ module Juicer
     # form: <tt>file.suffix?[timestamp]</tt>, ie <tt>images/logo.png?1234567890</tt>
     # which is the format used by Rails' image_tag helper.
     #
-    def self.rails(file)
-      self.path(file, :rails)
+    def self.rails(file, opts = {})
+      self.path(file, opts.merge(:type => :rails))
     end
     
     #
@@ -143,5 +154,18 @@ module Juicer
         file.sub(/-#{parameter}\d+(\.\w+)($|\?)/, '\1\2')
       end
     end
+
+    module Revision
+      def self.git(filename)
+        version = %x{git log --pretty=format:%H -1 -- #{filename} 2> /dev/null}
+        version = %x{git log --pretty=format:%H -1 2> /dev/null} if version == '' || version == nil
+        version = 'unknown' if version == '' || version == nil
+        return version
+      end
+
+      def self.mtime(filename)
+        File.mtime(filename).to_i
+      end
+    end  
   end
 end

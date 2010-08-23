@@ -108,6 +108,50 @@ class TestCssCacheBuster < Test::Unit::TestCase
     end
   end
 
+  def given_a_buster_with_type_hard_and_format(format)
+    File.open(path("a2.css"), "w") { |f| f.puts "" }
+    return Juicer::CssCacheBuster.new :document_root => path(""), :type => :hard, :format => format
+  end
+
+  def when_buster_saves_file(buster)
+    file = path("path_test2.css")
+    output = path("path_test3.css")
+    buster.save file, output
+    return output
+  end
+
+  def assert_all_urls_match(buster, output, pattern)
+    buster.urls(output).each { |asset| assert_match pattern, asset.path }
+  end
+
+  context "cache busters with git format" do
+    should "include last git commit touching that file in file name" do
+      # given
+      Juicer::CacheBuster::Revision.stubs(:git => 'GIT_LAST_COMMIT')
+      buster = given_a_buster_with_type_hard_and_format(:git)
+
+      # when
+      output = when_buster_saves_file(buster)
+
+      # then
+      assert_all_urls_match(buster, output, /-jcbGIT_LAST_COMMIT\.[a-z]{3}$/)
+    end
+  end
+
+  context "cache busters with mtime format" do
+    should "include file modification time in file name" do
+      # given
+      File.stubs(:mtime => 123)
+      buster = given_a_buster_with_type_hard_and_format(:mtime)
+
+      # when
+      output = when_buster_saves_file(buster)
+
+      # then
+      assert_all_urls_match(buster, output, /-jcb123\.[a-z]{3}$/)
+    end
+  end
+
   context "non-existent urls" do
     should "not raise" do
       File.open(path("a2.css"), "w") { |f| f.puts "a { background: url(i/dont/exist.fck); }" }

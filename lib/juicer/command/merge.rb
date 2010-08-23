@@ -80,6 +80,9 @@ the compressor the path should be the path to where the jar file is found.
                            (" " * 37) + "file names") do |type|
             @cache_buster = [:soft, :hard, :rails].include?(type.to_sym) ? type.to_sym : nil
           end
+          opt.on("-C", "--cache-buster-format format", "Format of the cache buster. Allowed mtime (timestamp) and git (git commit hash). Default is mtime") do |format|
+            @cache_buster_format = (format.to_sym == :git) ? :git : :mtime
+          end
           opt.on("-e", "--embed-images type", "none or data_uri. Default is none. Data_uri embeds images using Base64 encoding\n" +
                            (" " * 37) + "None leaves URLs untouched. Candiate images must be flagged with '?embed=true to be considered") do |embed|
             @image_embed_type = [:none, :data_uri].include?(embed.to_sym) ? embed.to_sym : nil
@@ -185,7 +188,7 @@ the compressor the path should be the path to where the jar file is found.
       #
       def cache_buster(file)
         return nil if !file || file !~ /\.css$/ || @cache_buster.nil?
-        Juicer::CssCacheBuster.new(:document_root => @document_root, :type => @cache_buster, :hosts => @local_hosts)
+        Juicer::CssCacheBuster.new(:document_root => @document_root, :type => @cache_buster, :hosts => @local_hosts, :format => @cache_buster_format)
       end
 
 			#
