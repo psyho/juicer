@@ -171,7 +171,7 @@ class AssetPathTest < Test::Unit::TestCase
       should "return URL with mtime query parameter and default parameter name" do
         mtime = File.mtime(@filename).to_i
         result = "#@filename?jcb=#{mtime}"
-        Juicer::CacheBuster.stubs(:soft).with(File.expand_path(@filename)).returns(result)
+        Juicer::CacheBuster.stubs(:soft).with(File.expand_path(@filename), :revision_type => nil).returns(result)
 
         assert_equal result, @asset.relative_path(:cache_buster_type => :soft)
       end

@@ -70,12 +70,24 @@ class CacheBusterTest < Test::Unit::TestCase
 
     should "include only mtime when parameter name is nil" do
       mtime = File.mtime(@filename).to_i
-      assert_equal "#@filename?#{mtime}", Juicer::CacheBuster.soft(@filename, nil)
+      assert_equal "#@filename?#{mtime}", Juicer::CacheBuster.soft(@filename, :parameter => nil)
     end
 
     should "include custom parameter name" do
       mtime = File.mtime(@filename).to_i
-      assert_equal "#@filename?juicer=#{mtime}", Juicer::CacheBuster.soft(@filename, :juicer)
+      assert_equal "#@filename?juicer=#{mtime}", Juicer::CacheBuster.soft(@filename, :parameter => :juicer)
+    end
+
+    should "use git cache buster if passed as a parameter" do
+      revision = revision_of_tracked_file
+      file_name = git_tracked_file
+      assert_equal "#{file_name}?jcb=#{revision}", Juicer::CacheBuster.soft(file_name, :revision_type => :git)
+    end
+
+    should "use mtime cache buster if passed as a parameter" do
+      file_name = git_tracked_file
+      revision = File.mtime(file_name).to_i
+      assert_equal "#{file_name}?jcb=#{revision}", Juicer::CacheBuster.soft(file_name, :revision_type => :mtime)
     end
   end
 
@@ -93,6 +105,12 @@ class CacheBusterTest < Test::Unit::TestCase
     should "include only mtime as query parameter" do
       mtime = File.mtime(@filename).to_i
       assert_equal "#@filename?#{mtime}", Juicer::CacheBuster.rails(@filename)
+    end
+
+    should "always use mtime cache busters" do
+      file_name = git_tracked_file
+      revision = Juicer::CacheBuster::Revision.mtime(file_name)
+      assert_equal "#{file_name}?#{revision}", Juicer::CacheBuster.rails(file_name, :revision_type => :git)
     end
   end
 
@@ -117,12 +135,60 @@ class CacheBusterTest < Test::Unit::TestCase
 
     should "include only mtime when parameter name is nil" do
       mtime = File.mtime("#@filename.txt").to_i
-      assert_equal "#@filename-#{mtime}.txt", Juicer::CacheBuster.hard("#@filename.txt", nil)
+      assert_equal "#@filename-#{mtime}.txt", Juicer::CacheBuster.hard("#@filename.txt", :parameter => nil)
     end
 
     should "include custom parameter name" do
       mtime = File.mtime("#@filename.txt").to_i
-      assert_equal "#@filename-juicer#{mtime}.txt", Juicer::CacheBuster.hard("#@filename.txt", :juicer)
+      assert_equal "#@filename-juicer#{mtime}.txt", Juicer::CacheBuster.hard("#@filename.txt", :parameter => :juicer)
+    end
+
+    should "use git cache buster if passed as a paramater" do
+      revision = revision_of_tracked_file
+      file_name = git_tracked_file
+      assert_equal "#{file_name.gsub('.txt', '')}-jcb#{revision}.txt", Juicer::CacheBuster.hard(file_name, :revision_type => :git)
+    end
+
+    should "use mtime cache buster if passed as a parameter" do
+      file_name = git_tracked_file
+      revision = File.mtime(file_name).to_i
+      assert_equal "#{file_name.gsub('.txt', '')}-jcb#{revision}.txt", Juicer::CacheBuster.hard(file_name, :revision_type => :mtime)
     end
   end
+
+  context "Revision" do
+    context "mtime" do
+      should "return the file modification time" do
+        assert_equal File.mtime(@filename).to_i, Juicer::CacheBuster::Revision.mtime(@filename)
+      end
+    end
+
+    context "git" do
+      should "return the last commit that modified the file if file is tracked by git" do
+        # given
+        expected_hash = revision_of_tracked_file
+        file_name = git_tracked_file
+
+        # then
+        assert_equal expected_hash, Juicer::CacheBuster::Revision.git(file_name)
+      end
+
+      should "return the last commit of the repository if file is not tracked by git" do
+        # given
+        last_commit = %x[git log -1 --pretty=oneline].split.first
+
+        # then
+        assert_equal last_commit, Juicer::CacheBuster::Revision.git(@filename)
+      end
+    end
+  end
+
+  def git_tracked_file
+    File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'fixtures', 'git-tracked-file.txt'))
+  end
+
+  def revision_of_tracked_file
+    '98477054651e764b4ece65f417df3eb17eb5de83'
+  end
+
 end

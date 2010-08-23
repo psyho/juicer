@@ -29,6 +29,7 @@ module Juicer
       @document_root.sub!(%r{/?$}, "") if @document_root
       @type = options[:type] || :soft
       @hosts = (options[:hosts] || []).collect { |h| h.sub!(%r{/?$}, "") }
+      @format = options[:format] || :mtime
       @contents = @base = nil
     end
 
@@ -43,7 +44,7 @@ module Juicer
       urls(file).each do |asset|
         begin
           next if used.include?(asset.path)
-          @contents.gsub!(asset.path, asset.path(:cache_buster_type => @type))
+          @contents.gsub!(asset.path, asset.path(:cache_buster_type => @type, :cache_buster_format => @format))
           used.push(asset.path)
         rescue Errno::ENOENT
           puts "Unable to locate file #{asset.path}, skipping cache buster"
