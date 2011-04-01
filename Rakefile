@@ -6,7 +6,7 @@ require 'rake/rdoctask'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "juicer"
+    gem.name = "psyho_juicer"
     gem.summary = "Command line tool for CSS and JavaScript developers"
     gem.description = "Resolve dependencies, merge and minify CSS and JavaScript files with Juicer - the command line tool for frontend engineers"
     gem.email = "christian@cjohansen.no"
@@ -64,7 +64,7 @@ desc 'Continuous build target'
 task :cruise do
   out = ENV['CC_BUILD_ARTIFACTS']
   mkdir_p out unless File.directory? out if out
- 
+
   Rake::Task["rcov"].invoke
   mv 'coverage/', "#{out}/" if out
 end
